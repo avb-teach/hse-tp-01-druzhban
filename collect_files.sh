@@ -48,20 +48,16 @@ copy_file_with_suffix() {
         extension=".$extension"
     fi
 
-    local count=${file_counters["$relative_path"]}
+    local key="$relative_path"
+    local count=${file_counters["$key"]}
     if [[ -z "$count" ]]; then
         count=1
     else
         count=$((count + 1))
     fi
-    file_counters["$relative_path"]=$count
+    file_counters["$key"]=$count
 
-    local output_path
-    if [[ $count -eq 1 ]]; then
-        output_path="$target_dir/${base_name}$((count))${extension}"
-    else
-        output_path="$target_dir/${base_name}$((count))${extension}"
-    fi
+    local output_path="$target_dir/${base_name}${count}${extension}"
     cp "$file_path" "$output_path"
     ((silent == 0)) && echo "Copied: $file_path -> $output_path"
 }
