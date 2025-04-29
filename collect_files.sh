@@ -107,7 +107,7 @@ input_dir="${positional_args[0]}"
 output_dir="${positional_args[1]}"
 
 #########################################
-# Запуск                                #
+# The Mian part                         #
 #########################################
 
 if [[ ! -d "$input_dir" ]]; then
