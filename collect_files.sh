@@ -31,23 +31,52 @@ max_depth=-1
 dir_number=0
 f_number=0
 total_size=0
+# global arr for counting filenames
+declare -A file_counters
+
+# copy_file_with_suffix() {
+#     local file_path="$1"
+#     local short_name=$(basename "$file_path")
+#     local very_short_name="${short_name%.*}"
+#     local extension="${short_name##*.}"
+
+#     local output_dir_path="$output_dir/$short_name"
+#     local i=2
+
+#     while [[ -e "$output_dir_path" ]]; do
+#         output_dir_path="$output_dir/${very_short_name}$i.$extension"
+#         ((i++))
+#     done
+
+#     cp "$file_path" "$output_dir_path"
+#     ((silent == 0)) && echo "Copied: $file_path -> $output_dir_path"
+# }
 
 copy_file_with_suffix() {
     local file_path="$1"
     local short_name=$(basename "$file_path")
-    local very_short_name="${short_name%.*}"
+    local base_name="${short_name%.*}"
     local extension="${short_name##*.}"
 
-    local output_dir_path="$output_dir/$short_name"
-    local i=1
+    # если файл без расширения
+    if [[ "$base_name" == "$short_name" ]]; then
+        extension=""
+    else
+        extension=".$extension"
+    fi
 
-    while [[ -e "$output_dir_path" ]]; do
-        output_dir_path="$output_dir/${very_short_name}$i.$extension"
-        ((i++))
-    done
+    # счётчик повторений по базовому имени
+    local count=${file_counters["$short_name"]}
+    if [[ -z "$count" ]]; then
+        count=1
+    else
+        count=$((count + 1))
+    fi
+    file_counters["$short_name"]=$count
 
-    cp "$file_path" "$output_dir_path"
-    ((silent == 0)) && echo "Copied: $file_path -> $output_dir_path"
+    local output_path="$output_dir/${base_name}${count}${extension}"
+    cp "$file_path" "$output_path"
+    ((silent == 0)) && echo "Copied: $file_path -> $output_path"
 }
 
 scan_dir() {
@@ -122,6 +151,31 @@ fi
 
 mkdir -p "$output_dir"
 scan_dir "$input_dir" 0
+
+
+#########################################
+# Renaming unqiue files back            #
+#########################################
+for short_name in "${!file_counters[@]}"; do
+    if [[ ${file_counters["$short_name"]} -eq 1 ]]; then
+        base_name="${short_name%.*}"
+        extension="${short_name##*.}"
+
+        if [[ "$base_name" == "$short_name" ]]; then
+            extension=""
+        else
+            extension=".$extension"
+        fi
+
+        file_with_1="$output_dir/${base_name}1${extension}"
+        final_name="$output_dir/${base_name}${extension}"
+
+        if [[ -e "$file_with_1" && ! -e "$final_name" ]]; then
+            mv "$file_with_1" "$final_name"
+            ((silent == 0)) && echo "Renamed: $file_with_1 -> $final_name"
+        fi
+    fi
+done
 
 ((silent == 0)) && echo
 ((silent == 0)) && echo "All done: $dir_number directories, $f_number files, $((total_size / 1024)) Kb copied"
