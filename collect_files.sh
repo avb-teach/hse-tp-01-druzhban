@@ -1,3 +1,4 @@
+
 #!/bin/bash
 
 ################################################
@@ -171,3 +172,5 @@ done
 
 ((silent == 0)) && echo
 ((silent == 0)) && echo "All done: $dir_number directories, $f_number files, $((total_size / 1024)) Kb copied"
+
+This paste expires in <1 hour. Public IP access. Share whatever you see with others in seconds with Context. Terms of ServiceReport this
