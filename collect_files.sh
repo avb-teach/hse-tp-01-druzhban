@@ -7,7 +7,7 @@
 
 Help() {
     echo "Script is copying all files from input directory to output directory"
-    echo "Files are copied without hierarchy unless max_depth is set"
+    echo "Files are copied without hierarchy"
     echo "Same names will be copied with chaged names"
     echo "example: file.txt and file.txt -> file.txt file_1.txt"
     echo
@@ -23,72 +23,51 @@ Help() {
 #Some functions and variables                   #
 #################################################
 
+# wether log are needed or not
 silent=0
+# wether file serach depth is limited
 max_depth=-1
 
+# for stats
 dir_number=0
 f_number=0
 total_size=0
 
-declare -A file_counters
-
 copy_file_with_suffix() {
     local file_path="$1"
-    local relative_path="$2"
-    local target_dir=$(dirname "$output_dir/$relative_path")
-    mkdir -p "$target_dir"
-
     local short_name=$(basename "$file_path")
-    local base_name="${short_name%.*}"
+    local very_short_name="${short_name%.*}"
     local extension="${short_name##*.}"
 
-    if [[ "$base_name" == "$short_name" ]]; then
-        extension=""
-    else
-        extension=".$extension"
-    fi
+    local output_dir_path="$output_dir/$short_name"
+    local i=2
 
-    local count=${file_counters["$relative_path"]}
-    if [[ -z "$count" ]]; then
-        count=1
-    else
-        count=$((count + 1))
-    fi
-    file_counters["$relative_path"]=$count
+    while [[ -e "$output_dir_path" ]]; do
+        output_dir_path="$output_dir/${very_short_name}_$i.$extension"
+        ((i++))
+    done
 
-    local output_path
-    if [[ $count -eq 1 ]]; then
-        output_path="$target_dir/${base_name}$((count))${extension}"
-    else
-        output_path="$target_dir/${base_name}$((count))${extension}"
-    fi
-    cp "$file_path" "$output_path"
-    ((silent == 0)) && echo "Copied: $file_path -> $output_path"
+    cp "$file_path" "$output_dir_path"
+    ((silent == 0)) && echo "Copied: $file_path -> $output_dir_path"
 }
 
 scan_dir() {
     local current_dir="$1"
     local depth="$2"
-    local rel_path="$3"
+
+    if [[ $max_depth -ge 0 && $depth -gt $max_depth ]]; then
+        return
+    fi
 
     for entry in "$current_dir"/*; do
         if [[ -d "$entry" ]]; then
             ((dir_number++))
-            local subdir_name=$(basename "$entry")
-            scan_dir "$entry" $((depth + 1)) "$rel_path/$subdir_name"
+            scan_dir "$entry" $((depth + 1))
         elif [[ -f "$entry" ]]; then
             ((f_number++))
             local size=$(stat -c%s "$entry")
             total_size=$((total_size + size))
-
-            local short_name=$(basename "$entry")
-            if [[ $max_depth -ge 0 && $depth -gt $max_depth ]]; then
-                copy_file_with_suffix "$entry" "$short_name"
-            elif [[ $max_depth -ge 0 ]]; then
-                copy_file_with_suffix "$entry" "$rel_path/$short_name"
-            else
-                copy_file_with_suffix "$entry" "$short_name"
-            fi
+            copy_file_with_suffix "$entry"
         fi
     done
 }
@@ -129,7 +108,7 @@ input_dir="${positional_args[0]}"
 output_dir="${positional_args[1]}"
 
 #########################################
-# The Mian part                         #
+# Запуск                                #
 #########################################
 
 if [[ ! -d "$input_dir" ]]; then
@@ -137,42 +116,8 @@ if [[ ! -d "$input_dir" ]]; then
     exit 1
 fi
 
-if [[ ! -d "$output_dir" ]]; then
-    echo "Error: output directory does not exist: $output_dir"
-    exit 1
-fi
-
 mkdir -p "$output_dir"
-scan_dir "$input_dir" 0 ""
-
-#########################################
-# Renaming unqiue files back            #
-#########################################
-for relative_path in "${!file_counters[@]}"; do
-    if [[ ${file_counters["$relative_path"]} -eq 1 ]]; then
-        base_name="${relative_path##*/}"
-        dir_path="${relative_path%/*}"
-        if [[ "$dir_path" == "$relative_path" ]]; then
-            dir_path=""
-        fi
-        base="${base_name%.*}"
-        ext="${base_name##*.}"
-
-        if [[ "$base" == "$base_name" ]]; then
-            ext=""
-        else
-            ext=".$ext"
-        fi
-
-        file_with_1="$output_dir/$dir_path/${base}1$ext"
-        final_name="$output_dir/$dir_path/${base}$ext"
-
-        if [[ -e "$file_with_1" && ! -e "$final_name" ]]; then
-            mv "$file_with_1" "$final_name"
-            ((silent == 0)) && echo "Renamed: $file_with_1 -> $final_name"
-        fi
-    fi
-done
+scan_dir "$input_dir" 0
 
 ((silent == 0)) && echo
 ((silent == 0)) && echo "All done: $dir_number directories, $f_number files, $((total_size / 1024)) Kb copied"
