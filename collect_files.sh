@@ -34,38 +34,21 @@ total_size=0
 # global arr for counting filenames
 declare -A file_counters
 
-# copy_file_with_suffix() {
-#     local file_path="$1"
-#     local short_name=$(basename "$file_path")
-#     local very_short_name="${short_name%.*}"
-#     local extension="${short_name##*.}"
-
-#     local output_dir_path="$output_dir/$short_name"
-#     local i=2
-
-#     while [[ -e "$output_dir_path" ]]; do
-#         output_dir_path="$output_dir/${very_short_name}$i.$extension"
-#         ((i++))
-#     done
-
-#     cp "$file_path" "$output_dir_path"
-#     ((silent == 0)) && echo "Copied: $file_path -> $output_dir_path"
-# }
-
+# after that all files names are with 1 or smth
 copy_file_with_suffix() {
     local file_path="$1"
     local short_name=$(basename "$file_path")
     local base_name="${short_name%.*}"
     local extension="${short_name##*.}"
 
-    # если файл без расширения
+    # no extension files
     if [[ "$base_name" == "$short_name" ]]; then
         extension=""
     else
         extension=".$extension"
     fi
 
-    # счётчик повторений по базовому имени
+    # base name counter
     local count=${file_counters["$short_name"]}
     if [[ -z "$count" ]]; then
         count=1
