@@ -39,10 +39,10 @@ copy_file_with_suffix() {
     local extension="${short_name##*.}"
 
     local output_dir_path="$output_dir/$short_name"
-    local i=2
+    local i=1
 
     while [[ -e "$output_dir_path" ]]; do
-        output_dir_path="$output_dir/${very_short_name}_$i.$extension"
+        output_dir_path="$output_dir/${very_short_name}$i.$extension"
         ((i++))
     done
 
@@ -112,6 +112,11 @@ output_dir="${positional_args[1]}"
 
 if [[ ! -d "$input_dir" ]]; then
     echo "Error: input directory does not exist: $input_dir"
+    exit 1
+fi
+
+if [[ ! -d "$output_dir" ]]; then
+    echo "Error: output directory does not exist: $output_dir"
     exit 1
 fi
 
